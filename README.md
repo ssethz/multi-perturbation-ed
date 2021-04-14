@@ -1,4 +1,4 @@
-# "Near-Optimal Multi-Perturbation ExperimentalDesign for Causal Structure Learning"
+# "Near-Optimal Multi-Perturbation Experimental Design for Causal Structure Learning"
 Efficient algorithms for selecting multiple perturbation experiments for the task of causal structure discovery.
 
 How we ran on our cluster:
@@ -8,6 +8,8 @@ For repeats:
 "for i in {1..50}; do bsub -W 6:00 -n 1 -R "rusage[mem=250]" "python3 main.py $i"; done"
 
 Files to be run for experiments take in the random seed as the first input argument so multiple repeats can be done in parallel. 
+
+To have all the necessary packages for running these experiments please use conda and use the provided environment.yml file. 
 
 Description of important files:
 
