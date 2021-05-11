@@ -15,11 +15,16 @@ Description of important files:
 
 main.py: contains all necessary functions for infinite sample experiments (including DREAM) and the 
     core algorithms of the project. Run to carry-out infinite sample experiments. 
+    
 finite_cd.py: contains machinary specific to finite sample experiments. Run to carry-out finite sample experiments.
+
 finite.py: contains some helper functions for finite experiments, such as generating DAGs with linear SEMs and computing the BIC of a model.
+
 mec_size.py: contains functions for sampling from an MEC or enumerating an MEC
+
 represent.py: a script with some functions for plotting the results of experiments. Run main.py or finite_cd.py first to run experiments, and then run represent.py to plot the results. 
-proposition.py: code used in the computations fopr the proof of Proposition 1. 
+
+proposition.py: code used in the computations for the proof of Proposition 1. 
 
 Notation:
 For the paper, number of variables per intervention was denoted q and batch size denoted m. In the code, we denote number of variables per intervention as k and the batch size as b or n_b. Some naming conventions were changed between the code and the paper. Format is in paper -> in code. DGC -> scdpp or 'cont'.  SSG -> lazy_ss_intervention. Some code is included for exploratory methods that weren't part of the paper. drg is DGC but without the continuous relaxation (discrete random greedy [1] is used instead). ss_cont is a continuous anologue of SSG. 
