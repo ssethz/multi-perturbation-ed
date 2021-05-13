@@ -17,45 +17,6 @@ import json
 import sys
 import math 
 import params
-#todo: statsmodule
-"""
-# Choose random intervention targets
-num_targets = 2
-num_settings = 2
-targets_list = [random.sample(nodes, num_targets) for _ in range(num_settings)]
-print(targets_list)
-
-# Generate observational data
-nsamples_obs = 1000
-obs_samples = g.sample(nsamples_obs)
-
-# Generate interventional data
-iv_mean = 1
-iv_var = .1
-nsamples_iv = 1000
-ivs = [{target: cd.GaussIntervention(iv_mean, iv_var) for target in targets} for targets in targets_list]
-iv_samples_list = [g.sample_interventional(iv, nsamples_iv) for iv in ivs]
-
-# Form sufficient statistics
-obs_suffstat = gauss_ci_suffstat(obs_samples)
-invariance_suffstat = gauss_invariance_suffstat(obs_samples, iv_samples_list)
-
-# Create conditional independence tester and invariance tester
-alpha = 1e-3
-alpha_inv = 1e-3
-ci_tester = MemoizedCI_Tester(gauss_ci_test, obs_suffstat, alpha=alpha)
-invariance_tester = MemoizedInvarianceTester(gauss_invariance_test, invariance_suffstat, alpha=alpha_inv)
-
-# Run UT-IGSP
-setting_list = [dict(known_interventions=[]) for _ in targets_list]
-est_dag, est_targets_list = unknown_target_igsp(setting_list, nodes, ci_tester, invariance_tester)
-print(est_targets_list)
-
-#now run again where the interventions are all known
-setting_list = [dict(known_interventions=i) for i in targets_list]
-est_dag, est_targets_list = unknown_target_igsp(setting_list, nodes, ci_tester, invariance_tester)
-print(est_targets_list)
-"""
 
 def gen_dag_weights(dag):
     """
@@ -71,7 +32,8 @@ def gen_dag_weights(dag):
 def get_bs_dags(num_bs, obs_samples, nsamples_obs, nnodes, cheat_cpdag=None, bic=True):
     """
     takes in a number of bootstrap dags and observational data, outputs a list of bootstrapped dags
-    cheat_dag is for debugging: on the first round forces the cheat cpdag into the sample
+    cheat_dag is for debugging and doing experimets where we allow access to the MEC: on the first
+    round forces the cheat cpdag into the sample
     """
     #subsample data in DAG bootstrap, and learn the DAG + MLE estimates of parameters
     bs_dags = [] # a list of the dags we get from the bootstrap
@@ -147,9 +109,7 @@ def get_bs_dags(num_bs, obs_samples, nsamples_obs, nnodes, cheat_cpdag=None, bic
             w_sum += bs_dags[i]['w']
     T = len(bs_dags_pruned)
     for i in range(T):
-        bs_dags_pruned[i]['w'] = bs_dags_pruned[i]['w'] / w_sum 
-        #print(bs_dags_pruned[i]['dag'])
-        #print(bs_dags_pruned[i]['w'])
+        bs_dags_pruned[i]['w'] = bs_dags_pruned[i]['w'] / w_sum
     return bs_dags_pruned
 
 def MI_obj_gen(M, bs_dags, iv_means, K=50, iv_var = 0.01):
@@ -164,20 +124,14 @@ def MI_obj_gen(M, bs_dags, iv_means, K=50, iv_var = 0.01):
     sum_ws = np.sum(ws)
     def MI_obj(epsilon, verbose=False, iter=False):
         #epsilon is a list of lists
-        #an empty intervention set is maximally bad since get no
-        #TODO implement me
-        #to speed-up run-times, lets just assume yopu get K samples of each intervention
-        #start with K=50
+        #to speed-up run-times, we just assume you get K samples of each intervention
         #t0= time.time()
-        #np.random.seed(0) #to get repeatability in the objective for the same intervention
         obj = 0
         if len(epsilon) == 0:
             return -np.inf
         for i in range(T):
             for _ in range(M):
                 #sample y_mt from the intervention and compute p(y) given each possible DAG
-                #TODO: ^ 
-                #remember to get K of each intervention
                 #first build a causaldag representation of the dag and adjacency, then sample from it
                 #using the intervention
                 #t1=time.time()
@@ -365,17 +319,7 @@ def ss_infinite_cont(bs_dags, n_b, k, obj):
 
 def process_score(inter, bs_dags, loss, OVs, meth, f, k, b, k_range, inters_dict):
     obj_val = loss(inter)
-    """
-    while np.all(np.asarray(score_boxes) < obj_val):
-        print("score boxes")
-        print(len(score_boxes))
-        #throw an exception if we get stuck
-        if len(np.array(score_boxes)) > 1000:
-            raise Exception
-        inters=inters+chordal_random_finite(bs_dags, 1, 1)
-        score_boxes.append(loss(inters))
-    """
-    #stores the first box index that obtains moreobjective value
+    #stores the first box index that obtains more objective value
     #corresponds to the number of random single perturbation interventions
     #needed to outperform the method
     #step_score = np.argmax(np.array(score_boxes)>=obj_val).item()
@@ -468,11 +412,6 @@ def run_finite_experiment(nnodes, generator, k_range, meths, labs, title = '', n
         obs_samples = g.sample(nsamples_obs)
         true_dag = {'dag':dag, 'A': g._weight_mat, 'b': np.ones(1)}
         true_dags.append(true_dag.copy())
-
-        """
-        scaler = preprocessing.StandardScaler().fit(obs_samples)
-        obs_samples = scaler.transform(obs_samples)
-        """
         
         bs_dags = get_bs_dags(num_bs, obs_samples, nsamples_obs, nnodes, cheat_cpdag=cpdag)
         initial_dags_list.append(bs_dags.copy())
@@ -481,18 +420,8 @@ def run_finite_experiment(nnodes, generator, k_range, meths, labs, title = '', n
         #compute loss function given this set of DAGs and parameters
         loss = MI_obj_gen(M, bs_dags, np.zeros(nnodes)+5, K=K) #interventions of size 5
 
-        """
-        for _ in range(5):
-            print(loss([[0]]))
-        """
-
         score_boxes = [loss([])]
         inters = []
-        """
-        for i in range(3):
-            inters=inters+chordal_random_finite(bs_dags, 1, 1)
-            score_boxes.append(loss(inters))
-        """
 
         for k in k_range:
             for b in b_range:
@@ -639,63 +568,12 @@ if __name__ == '__main__':
     else:
         run = 0
         np.random.seed(42)
-    """
-    nnodes = 10
-    nodes = set(range(nnodes))
-    exp_nbrs = 2 #this is the expected number of edges in the ER graph
-    er_density = 0.25
-    d = cd.rand.directed_erdos(nnodes, er_density) #exp_nbrs/(nnodes-1))
-
-    #generate weights uniform away from 0
-    g = cd.rand.rand_weights(d) #all variances are 1 iof not stated in thew func call
-    #we use causaldag package to generate but could use our methods and convert the type
-    print(g.to_amat())
-    # Generate observational data
-    nsamples_obs = 1000
-    obs_samples = g.sample(nsamples_obs)
     
-    num_bs = 10
-    bs_dags = get_bs_dags(num_bs, obs_samples, nsamples_obs)
-
-    #now bs_dags has a list of all the learnt dags
-    #print(bs_dags)
-    #compute loss function given this set of DAGs and parameters
-    M= 20
-    loss = MI_obj_gen(M, bs_dags, K=20)
-    #optimize the loss with one of our methods
-    for i in range(4):
-        loss([[1,2], [3]])
-    n_b = 1
-    k = 2
-    print(mode_mec(bs_dags))
-
-    rand_int = chordal_random_finite(bs_dags, n_b, k)
-    print(rand_int)
-    ss_int = ss_finite(bs_dags, loss, n_b, k)
-    print(ss_int)
-    ss_int2 = ss_infinite(bs_dags, n_b, k, None, num_samples=100)
-    print(ss_int2)
-
-    gred_int = gred_infinite(bs_dags, n_b, k, None)
-    print(gred_int)
-
-    #evaluate using a fresh loss with a different bs_dags list
-    bs_dags = get_bs_dags(num_bs, obs_samples, nsamples_obs, nnodes)
-    M= 20
-    loss2 = MI_obj_gen(M, bs_dags, K=20)
-    print("evals")
-    for i in range(4):
-        print("round " + str(i))
-        print(loss(rand_int))
-        print(loss(ss_int))
-        print(loss(ss_int2))
-        print(loss(gred_int))
-    """
     meths = ['rand', 'ss_inf_b', 'cont',  'ss_inf_a', 'ss_a', 'ss_b']
     labs = ['rand',  'ss_inf_b', 'cont', 'ss_inf_a', 'ss_a', 'ss_b']
 
     k_range = [1,2,3,4,5]
-    generators = ['ER_0.1']#, 'tree']#, 'ER_0.1']
+    generators = ['ER_0.1']
     repeat_list = [1]
     for nnodes in [20,40]:
         for i in range(len(repeat_list)):
