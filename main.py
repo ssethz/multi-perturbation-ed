@@ -20,7 +20,7 @@ PCDAG objects:
 Represented by an integer matrix where m[i, j]= 1 iff i->j, -1 iff i-j (and edge no known), else 0
 
 Weight matrices:
-For linear models we store the weights as a matrix of floats
+For linear models we store the weights as a matrix of floats. For infinite samples we don't need a weight matrix. 
 
 Noise:
 Noise scales in gaussian linear models are stored as a vectors of floats
