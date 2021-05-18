@@ -168,47 +168,11 @@ def load_exp_data(name, title, runs, k_range, to_plot, finite=False, var_names=[
     print(total_invalid) #this was the number of times we had to regenerate the DAG
     return
 
-def read_dream_interventional(name, n, K, exps, runs, k_range, b_range, var_names):
-    """
-    reads in interventional data from a DREAM file
-    this function is unused
-    """
-    indices = (np.arange(runs)+1).tolist()
-    int_data = {} #will be a dict indexed by a exp+run+vn string
-    #make a separate sheet for each sim
-    for exp in range(1, exps+1):
-        num_rows=0
-        #make the file name and header 
-        cells = ["Ecoli1", "Ecoli2", "Yeast1", "Yeast2", "Yeast3"]
-
-        f_perts = "knockouts/InSilicoSize"+str(n) + "-" + cells[exp-1]+"_" + "dualknockouts.tsv"
-        pert_df = np.genfromtxt(fname=f_perts, delimiter="\t", skip_header=1, filling_values=1)
-        total_row = 1
-            
-        for run in indices:
-            exp_run_tag = str(exp) + "_" + str(run)
-            int_data[exp_run_tag] = {}
-            name1 = name + "_" + exp_run_tag
-            with open(name1 + '_inters.json', 'r') as fp:
-                inters=json.load(fp)
-            for k_ind in range(len(k_range)):
-                k=k_range[k_ind]
-                for b in b_range:
-                    for vn in var_names:
-                        f = "b=" + str(b) + '_k=' + str(k)  + '_' + vn 
-                        if f not in int_data[exp_run_tag]:
-                            int_data[exp_run_tag][f] = []
-                        #each entry in the intervention has K samples
-                        for epsilon in inters[f]:
-                            for _ in epsilon:
-                                int_data[exp_run_tag][f].append(pert_df[total_row:(total_row+K)])
-                                total_row += K 
-
-    return int_data
-
 def posterior(epsilon, bs_dags, true_dag_dict, iv_means, iv_var, K):
     """
-    computes the posterior either by sampling from the true dag
+    computes the posterior given some interventions by sampling data
+    from the true dag and using the list of bootstrapped dags as the support
+    of the posterior
     """
     #read interventional data in
     T= len(bs_dags)
@@ -237,7 +201,8 @@ def posterior(epsilon, bs_dags, true_dag_dict, iv_means, iv_var, K):
 
 def f1_score(bs_dags, true_dag):
     """
-    compute the F1 score 
+    compute the F1 score for predicting prescence of
+    a directed edge in a DAG
     true_dag is the dag itself not the dict
     """
     n = true_dag.shape[0]
@@ -476,7 +441,7 @@ def finite_plot(name, k_range, f1s, shds, f1s_ebar, shds_ebar, to_plot, legend_n
     return
 
 
-#infinite sample experiments plot edges identified
+#infinite sample experiments plot num edges identified on average
 to_plot = [('ss_a', 2), ('ss_b', 2), ('cont', 2), ('rand', 2), ('ss_a', 0)]
 labs = ["SSGa (q=3)", "SSGb (q=3)", "DGC (q=3)", 'Rand (q=3)', 'Greedy (q=1)']
 

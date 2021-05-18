@@ -26,16 +26,6 @@ Noise:
 Noise scales in gaussian linear models are stored as a vectors of floats
 """
 
-def generate_chain_dag_no_colliders(n):
-    """
-    generates a DAG that is just a chain with no colliders. 
-    input:
-    int n: number of nodes
-    output:
-    matrix: chain dag with no unshielded colliders
-    """
-    return np.eye(n, k=1, dtype=np.int32) #k=1 since we just fill in the upper diagonal
-
 def generate_chain_dag_fixed_root(n, v):
     """
     generates a DAG that is just a chain with no colliders, but may not just be directions
@@ -55,44 +45,6 @@ def generate_chain_dag_fixed_root(n, v):
 
     return dag_temp
 
-def generate_scale_free(n, alpha=0.41, beta=0.54):
-    """
-    generates a general directed scale-free graph
-    int n: size of network
-    float alpha: prob adding new node to existing node
-
-    float beta:Probability for adding an edge between two existing nodes. 
-    One existing node is chosen randomly according the in-degree distribution 
-    and the other chosen randomly according to the out-degree distribution.
-    
-    """
-
-    #gamma is alpha-beta and doesn't need be specified in function call
-    #gamma:Probability for adding a new node connected to an existing node chosen randomly 
-    #according to the out-degree distribution
-    g = nx.scale_free_graph(n, alpha, beta, 1-alpha-beta)
-
-    #turn to undirected, generate a random ordering, remove self cycles, orient
-    ordering = np.arange(n)
-    np.random.shuffle(ordering) 
-    
-    dag = np.zeros((n, n))
-    G = nx.to_numpy_matrix(g)
-
-    for i in range(n):
-        for j in range(i, n):
-            if i == j:
-                dag[i][j] = 0
-            elif G[i,j] >= 1 or G[j,i] >= 1:
-                if ordering[i] > ordering[j]:
-                    dag[j][i] = 1
-                    dag[i][j] = 0
-                else:
-                    dag[i][j] = 1
-                    dag[j][i] = 0
-
-    return dag
-
 def generate_barabasi_albert(n, m1, m2=1, p=1):
     #Generates a scale-free dag using the Barabasi-Albert Model
     #each node is attached to m1 times with prob p, else p2 times
@@ -101,7 +53,6 @@ def generate_barabasi_albert(n, m1, m2=1, p=1):
     dag = np.triu(nx.to_numpy_matrix(g), k=1)
     np.random.shuffle(dag)
     return dag
-
 
 def uniform_random_tree(n):
     """
@@ -131,10 +82,14 @@ def uniform_random_tree(n):
 
     return dag_temp
 
-
 def generate_k_star_system(n, k):
     """
-    generates a forest of k stars
+    generates a forest of k stars with n nodes
+    input:
+    int n: tree size
+    int k: number of stars
+    output:
+    matrix: dag with tree mec
     """
     dag = np.zeros((n,n))
     r = int(math.ceil(n/k))
@@ -224,22 +179,6 @@ def generate_chain_dag(n):
             dag[i+1][i] = 1
     return dag
 
-def plot_direct_numpy(dag, title):
-    """
-    plots a directed graph in numpy format
-    input:
-    matrx dag
-    str title
-    output:
-    saves a pdf of an image of the dag
-    """
-    dag_nx = nx.DiGraph(dag)
-
-    nx.draw(dag_nx, with_labels=True, font_weight='bold')
-    plt.savefig('figures/' + title + '.pdf', bbox_inches='tight')
-    plt.close()
-    #TODO add formatting like titles and better readability
-    return
 
 def extract_undirected(cpdag, v):
     """
@@ -272,7 +211,7 @@ def extract_all_directed(cpdag):
 def chordal_random_intervention(cpdag, k):
     """
     generate a chordal random intervention of size up to k
-    by chordal random we just mean intervene on nodes adjacentb to undirected edges
+    by chordal random we just mean intervene on nodes adjacent to undirected edges
     input:
     matrix cpdag: the current cpdag
     int k: the number of perturbations
@@ -434,7 +373,7 @@ def meek(cpdag, new_edges=None, skip_r3=False, is_tree=False):
                             if((t,w)) not in latest_edges_temp:
                                 latest_edges_temp.append((t, w))
 
-            #now consider its the bottom side we directed. #TODO pull out repeated code in functions here
+            #now consider its the bottom side we directed.
             
             for edge in latest_edges:
                 v = edge[0]
@@ -626,7 +565,6 @@ def gen_stochastic_grad_fun(cpdag, ref_cpdag, num_sample=1, exact=True, total_x 
         output:
         int: the gradient of the objective
         """
-        #print(cpdag)
         
         grad_f = np.zeros(n)
         #sample the intervention given x
@@ -665,8 +603,8 @@ def gen_stochastic_grad_fun(cpdag, ref_cpdag, num_sample=1, exact=True, total_x 
     return stochastic_grad
 
 def gen_ss_stochastic_grad_fun(cpdag, ref_cpdag, num_sample=1, exact=True, total_x = 1, is_tree=False):
-    #same as gen_stochastic_grad_fun but ss is the groundset and we add interventions not perturbations
-    #uses the edge orienting objective
+    #Same as gen_stochastic_grad_fun but sep system is the groundset and we add interventions 
+    #not perturbations. Uses the edge orienting objective
     n = cpdag.shape[0]
     def stochastic_grad(x, ss):
         """
@@ -804,9 +742,8 @@ def pipage(x, k):
             else:
                 x[T[0]] = np.random.binomial(1, x[T[0]], 1)[0]
 
-    #TODO: right now this is kind of bad since say we get[0.9, 0, 0], we can intervene on 
-    #nothing. for now I've just done a hacky fix where if everything is 0 so far, we 
-    #intervene on the last remaining variable for sure. thats in the if above
+    #If we get[0.9, 0, 0], we can intervene on nothing. The fixed used is to
+    #intervene on the last remaining variable for sure. That's in the if above
     return x
 
 def gen_hess_fun(cpdag, ref_cpdag, num_sample=1, exact=True, total_x = 1, is_tree=False):
@@ -1015,118 +952,11 @@ def scdpp_ss(cpdag, n_b, k, obj, stochastic_grad, hess_fun, T=100, max_score=1, 
 
     return interventions
 
-def gred_intervention_set(n, n_b, k, obj, stochastic_grad, T=100, max_score=1, num_pipage_sample=10, is_tree=False, verbose=False):
-    """
-    generate an intervention set using our greedy method, that obeys the constraints
-    of batch size b and max intervention size k for infinite samples per intervention
-    only uses gradient information unlike scdpp, so is unused for the final experiments
-    input:
-    int n: number of nodes
-    int n_b: batch size
-    int k: max intervention size
-    matrix ref_cpdag: the cpdag used in the obj to count the number of oriented edges
-    int num_sample: the number of samples used to approximate the objective
-    int T: number of iterations
-    bool exact: True if use exact uniform sampling, False if use a fast sampler
-    output:
-    list of lists of ints: each list is an intervention on up to k nodes
-    """
-
-    intervention_set = []
-    intervention = []
-
-    for _ in range(n_b):
-        x_t = np.zeros(n)
-        d_t = np.zeros(n) #x_t
-        u_bar = 1 #the upper bound for each variable in x_t
-        A = np.vstack((np.ones(n), np.eye(n)))  #constraint matrix for linear program
-        for t in range(0, T):
-            
-            rho_t = 4/(t+8)**(2/3)
-            #we now compute an unbiased estimate of the gradient of the multilinear extension
-            grad_f = stochastic_grad(intervention_set, x_t)
-
-            d_t = (1-rho_t)*d_t + rho_t * grad_f
-            #we now do a conditioning step which involves solving a linear program
-            
-            b = np.insert(u_bar-x_t, 0, k) #constraint vector
-            v_t = scipy.optimize.linprog(-d_t, A_ub = A, b_ub = b, bounds = (0,1))
-            x_t = x_t + v_t.x / T
-            
-            
-            if t%20 == 0 and verbose:
-                print("EVAL t=" + str(t))
-                print(x_t)
-                for _ in range(0, 5):
-                    x = pipage(x_t, k) 
-                    obj_val = obj(intervention_set+[np.flatnonzero(x).tolist()])
-                    print(obj_val)
-                print("==============")
-            
-            
-            
-        #check x doesn't break the constraint
-        if(np.sum(x_t) > k+0.1):
-            raise Exception
-        #now do pipage rounding a few times and pick the best
-        best_x = pipage(x_t, k) 
-        best_score = obj(intervention_set+[np.flatnonzero(best_x).tolist()])
-        #do ten runs of pipage rounding and pick the best
-        for _ in range(10):
-            x = pipage(x_t, k) 
-            x_score = obj(intervention_set+[np.flatnonzero(x).tolist()])
-            if x_score > best_score:
-                best_x = x
-                best_score = x_score
-        intervention_set.append(np.flatnonzero(best_x).tolist())
-
-    #TODO monotone case when you have soft interventions (very similar to this)
-    return intervention_set
-
-def ghassami_greedy(cpdag, n_b, ref_cpdag, num_sample):
-    """
-    the greedy approach of ghassami et al 2018 that only selects single interventions
-    This doesn't implement lazy evaluation. 
-
-    input:
-    matrix cpdag
-    int n_b: batch size
-    matrix ref_cpdag: the cpdag used in the obj to count the number of oriented edges
-    int num_sample: the number of samples used to approximate the objective
-    output:
-    list of lists of ints: each list is a singleton intervention
-    """
-
-    n = cpdag.shape[0]
-    intervention_set = []
-    intervention = []
-    
-    selected = []
-    for _ in range(n_b):
-        best_v = 0
-        best_score = -np.inf
-        #daglist for this round of intervention selection
-        dag_list = mec_size.uniform_sample_dag_plural(cpdag, [], num_sample)
-        for v in range(n):
-            #if already selected just ignore it
-            if v in selected:
-                continue
-            dummy_intervention_set = intervention_set + [[v]]
-            temp_obj = objective_given_dags_interventions(cpdag, dummy_intervention_set, ref_cpdag, dag_list)
-            if temp_obj > best_score:
-                best_v = v
-                best_score = temp_obj
-
-        selected.append(best_v)
-        intervention_set.append([best_v])
-
-    return intervention_set
-
 def edge_obj_sample(cpdags, ws, num_samples, obj=None, is_tree=False):
     """
     takes obj that uses a list of dags, and returns the obj with a fixed dag list
     cpdags is a list of MECs, ws is weights. We uniform sample from the possible DAGs
-    If obj==None, assume is edge orienting
+    If obj==None, assume is edge orienting objective
     """
     if obj in [objective_given_dags_interventions, None]:
         num_cpdags = len(cpdags)
@@ -1371,7 +1201,7 @@ def weighted_dags_edge_obj_sample_ss(cpdags, ws, dags, obj = None, total_x=1, is
 
 def ss_construct(n, k):
     """
-    given the size of the graph, constructs a separating system agnostic to the
+    Given the size of the graph, constructs a separating system agnostic to the
     structure of the graph. Effectively implements theorem 1 in Shanmugam 2015
     input:
     int n
@@ -1379,8 +1209,6 @@ def ss_construct(n, k):
     output:
     list of list of ints separating system
     """
-
-    #implement lemma 1 from paper
     a = math.ceil(n/k)
     l = math.ceil(math.log(n, a))
     #get distinct 'l' length labels for all elements 1:n, using letter from alphabet size 'a'+1
@@ -1388,7 +1216,6 @@ def ss_construct(n, k):
 
     #labels is n lists each with l elements
     labels = []
-    #TODO: faster way to get a list of n empty lists
 
     x = l - 1
     for i in range(0, n):
@@ -1438,10 +1265,10 @@ def ss_construct(n, k):
 
 def smart_ss_construct(cpdag, k):
     """
-    takes in the cpdag, k, and returns a seperating system as 
+    Takes in the cpdag, k, and returns a seperating system as 
     given in Lindgren et al. 18.
-    for finding minimum vertex cover we use a greedy algorith,
-    for finding an optimal coloring we use welch-powell
+    For finding minimum vertex cover we use a greedy algorithm,
+    For finding an optimal coloring we use welch-powell.
     """
 
 
@@ -1479,61 +1306,6 @@ def smart_ss_construct(cpdag, k):
 
     return interventions
 
-def ss_intervention(n, n_b, k, obj, cpdag, smart_ss = True, verbose=False):
-    """
-    greedily selects interventions from a seperating system
-    input:
-    n: number nodes in the true DAG
-    int n_b: batch size
-    int k: intervention size
-    int num_sample: the number of samples used to approximate the objective
-    function obj: an objective function. 
-    matrix cpdag: 
-    smart_ss bool: is True if using a graph specific ss constructor
-    """
-
-    best_interventions = []
-    best_score = -np.inf
-    #iterate over possible k and then pick the best at the end
-    for k_cand in range(1, k+1):
-        #first construct a separating system. we use Shanmugam 2015 which is agnostic
-        #to the strucxture of the graph
-        interventions = []
-        if smart_ss:
-            k_cand = k #skip all other possible k
-            ss = smart_ss_construct(cpdag, k_cand)
-        else:
-            ss = ss_construct(n, k_cand)
-
-        cur_obj = obj
-
-        #for each element in the final batch choose greedily
-        for i in range(n_b):
-            current_obj_score = -np.inf
-            best_intervention = []
-            for intervention_cand in ss:
-                interventions_cand = interventions + [intervention_cand]
-                #TODO: you want a fixed set of graphs for all interventions
-                cand_score = cur_obj(interventions_cand)
-                if verbose:
-                    print(interventions_cand)
-                    print(cand_score)
-                if cand_score > current_obj_score:
-                    current_obj_score = cand_score
-                    best_intervention = intervention_cand
-            interventions.append(best_intervention)
-
-        score = cur_obj(interventions)
-        if verbose:
-            print(interventions)
-            print(score)
-        #now greedily sample an intervention from it and save its obj if its better
-        if score > best_score:
-            best_score = score
-            best_interventions = interventions
-    #pick the intervention set with best score
-    return best_interventions
-
 def lazy_ss_intervention(n, n_b, k, obj, cpdag, smart_ss = True, all_k = True, verbose=False):
     """
     greedily selects interventions from a seperating system but uses lazy evaluation for speedup
@@ -1547,8 +1319,6 @@ def lazy_ss_intervention(n, n_b, k, obj, cpdag, smart_ss = True, all_k = True, v
     smart_ss bool: is True if using a graph specific ss constructor
     bool all_k: if to try the SS for all or
     """
-
-    #TODO: more sophisticated separating system construction
 
     best_interventions = []
     best_score = -np.inf
@@ -1638,9 +1408,9 @@ def lazy_ss_intervention(n, n_b, k, obj, cpdag, smart_ss = True, all_k = True, v
 
 def lazy_drg(n, n_b, k, obj, verbose=False):
     """
-    An approach to gred_intervention_set that uses a fixed objective and the discrete
-    random greedy akgorithm (https://theory.epfl.ch/moranfe/Publications/SODA2014.pdf)
-    to select interventions
+    An approach to our stochastic continuous gredy algorithm that uses a fixed objective 
+    and the discrete random greedy algorithm 
+    (https://theory.epfl.ch/moranfe/Publications/SODA2014.pdf) to select interventions. 
     """
     #take the k elements with the highest marginal improvement
     #sample from these uniformly
@@ -1713,76 +1483,9 @@ def lazy_drg(n, n_b, k, obj, verbose=False):
     #pick the intervention set with best score
     return interventions
 
-def ss_continuous_stochastic(n, n_b, k, obj, stochastic_grad, cpdag, T=100, max_score=1, num_pipage_sample=10, verbose=False):
-    """
-    Generates a seperating system then uses a continuous stochastic algorithm
-    to optimize the monotone submodular function
-    """
-
-    ss = smart_ss_construct(cpdag, k) #use smart ss since the other requires rerunning for all different k
-    n_ss = len(ss)
-    #if we can completely identify using the seperating system, do so
-    if n_ss <= n_b:
-        return ss
-    x_t = np.zeros(n_ss)
-    d_t = np.zeros(n_ss) #x_t
-    A = np.ones((1, n_ss))  #constraint matrix for linear program
-    #start_time = time.time()
-    for t in range(0, T):
-        #print("TEST")
-        
-        rho_t = 4/(t+8)**(2/3)
-        #we now compute an unbiased estimate of the gradient of the multilinear extension
-        grad_f = stochastic_grad(x_t, ss) 
-
-        d_t = (1-rho_t)*d_t + rho_t * grad_f
-        #we now do a conditioning step which involves solving a linear program
-        v_t = scipy.optimize.linprog(-d_t, A_ub = A, b_ub = np.asarray([n_b]), bounds = (0,1))
-        x_t = x_t + v_t.x / T
-        
-        
-        if t%20 == 0 and verbose:
-            print("EVAL t=" + str(t))
-            print(x_t)
-            for _ in range(0, 1):
-                x = pipage(x_t, n_b) 
-                indices = np.flatnonzero(x).tolist()
-
-                interventions = [ss[i] for i in indices]
-                obj_val = obj(interventions)
-            print(obj_val)
-            print("==============")
-        
-        
-        
-    #check x doesn't break the constraint
-    if(np.sum(x_t) > n_b+0.1):
-        raise Exception
-    #resolve any slight numerical issues by ensuring the constraints are met
-    x_t = np.minimum(x_t / np.linalg.norm(x_t, ord=1) * n_b, 1) 
-    #now do pipage rounding a few times and pick the best
-    best_x = pipage(x_t, n_b) 
-    indices = np.flatnonzero(best_x).tolist()
-    interventions = [ss[i] for i in indices]
-    best_score = obj(interventions)
-    #do ten runs of pipage rounding and pick the best
-    for _ in range(10):
-        x = pipage(x_t, n_b) 
-        indices = np.flatnonzero(x).tolist()
-        interventions = [ss[i] for i in indices]
-        x_score = obj(interventions)
-        if x_score > best_score:
-            best_x = x
-            best_score = x_score
-    
-    indices = np.flatnonzero(best_x).tolist()
-    interventions = [ss[i] for i in indices]
-
-    return interventions
-
 def process_ov(inter, b, k, OVs, obj, meth, k_range):
     """
-    process experiment runs by feeding them into Ov list
+    process experiment runs by feeding them into obj value list
     """
     f = "b=" + str(b) + '_k=' + str(k) + "_" + meth
     #for ss_a, might favour smaller seperating system if est objective is higher

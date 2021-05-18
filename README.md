@@ -26,11 +26,12 @@ represent.py: a script with some functions for plotting the results of experimen
 
 proposition.py: code used in the computations for the proof of Proposition 1. 
 
+gnw_obs: a file containing all of the GeneNetWeaver ground-truth DAGs used in our experiments. 
+
 Notation:
 For the paper, number of variables per intervention was denoted q and batch size denoted m. In the code, we denote number of variables per intervention as k and the batch size as b or n_b. Some naming conventions were changed between the code and the paper. Format is in paper -> in code. 
 DGC -> scdpp or 'cont'.  
 SSG -> lazy_ss_intervention. 
-Some code is included for exploratory methods that weren't part of the paper. drg is DGC but without the continuous relaxation (discrete random greedy [1] is used instead). ss_cont is a continuous anologue of SSG. 
-
+Some code is included for exploratory methods that weren't part of the paper. drg is DGC but without the continuous relaxation (discrete random greedy [1] is used instead). 
 
 [1] Buchbinder, Niv, et al. "Submodular maximization with cardinality constraints." Proceedings of the twenty-fifth annual ACM-SIAM symposium on Discrete algorithms. Society for Industrial and Applied Mathematics, 2014.
