@@ -63,12 +63,12 @@ def get_bs_dags(num_bs, obs_samples, nsamples_obs, nnodes, cheat_cpdag=None, bic
             est_dag = est_dag.to_amat()[0]
             est_cpdag = main.cpdag_from_dag_observational(est_dag)
         
-        if mec_size.mec_size(est_cpdag, []) <= num_bs:
+        if mec_size.mec_size(est_cpdag) <= num_bs:
             #now compute the mec and add all mec members
-            mec_dags = mec_size.enumerate_dags(est_cpdag, [])
+            mec_dags = mec_size.enumerate_dags(est_cpdag)
         else:
             #get just enough dags if mec too big
-            mec_dags = mec_size.uniform_sample_dag_plural(est_cpdag, [], num_bs-len(bs_dags), exact=False)
+            mec_dags = mec_size.uniform_sample_dag_plural(est_cpdag, num_bs-len(bs_dags), exact=False)
         for est_dag in mec_dags:
             if est_dag.tobytes() in bs_index:
                 #increase weight by one if we double count
@@ -395,7 +395,7 @@ def run_finite_experiment(nnodes, generator, k_range, meths, labs, title = '', n
             max_score = main.cpdag_obj_val(dag) - main.cpdag_obj_val(cpdag) # for normalizing scores
             #accept dags with mec size less than 100 and more than 5
             #print(max_score)
-            mec_size_dag = mec_size.mec_size(cpdag, [])
+            mec_size_dag = mec_size.mec_size(cpdag)
             if  mec_size_dag <=200 and mec_size_dag >= nnodes:
                 valid_dag = True
             else:

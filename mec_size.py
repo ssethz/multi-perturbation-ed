@@ -23,9 +23,9 @@ def is_tree(G):
     G_nx = nx.Graph(G*-1)
     return nx_is_tree(G_nx)
 
-def size_he_cc(G, H):
+def size_he_cc(G):
     """
-    He et all 2015 to break a connected component into all its possible dags
+    He et al. 2015: to break a connected component into all its possible dags
     n is the number of nodes
     node_ids is the ids of the nodes in the connected component
     """
@@ -38,8 +38,8 @@ def size_he_cc(G, H):
     if np.all(G >= 0):
         size += 1
         return size
+
     #if its fully connected return it
-    
     if is_fully_connected(G):
         size += math.factorial(G.shape[0])
         return size
@@ -63,15 +63,14 @@ def size_he_cc(G, H):
             size += 1
         else:
             #otherwise run it through size again
-            size_1 = size_he(G_v, H)
+            size_1 = size_he(G_v)
             size += size_1
 
     return size
 
-def size_he(G, H):
+def size_he(G):
     """
     computes the size of MEC given by G
-    with background knowledge H (not implemented)
     similar to He et al. 2015
     """
 
@@ -89,17 +88,16 @@ def size_he(G, H):
     #break G into connected components and product their sizes
     for i in range(n_components):
         index = np.nonzero(labels == i)[0] #the 0 index into first element of tuple
-        #TODO:here we would need to alter H for the smaller graph, if H is nonempty
-        size1 = size_he_cc(G[index][:, index], H)
+        size1 = size_he_cc(G[index][:, index])
         G_size = G_size * size1
     return G_size
 
-def mec_size(G, H):
+def mec_size(G):
     """
     shell function for interfacing with other modules
     computes the MEC size of a graph G. 
     """
-    return size_he(G.copy(), H)
+    return size_he(G.copy())
 
 def is_fully_directed(G):
     """
@@ -111,7 +109,7 @@ def is_fully_directed(G):
                 return False
     return True
 
-def fast_sample_dag(cpdag, H):
+def fast_sample_dag(cpdag):
     """
     biased but fast dag sampling from a cpdag
     from Ghassami 2018
@@ -158,10 +156,10 @@ def fast_sample_dag(cpdag, H):
 
     #first convert cpdag to fully directed format after removing all directed edges
     G = np.minimum(cpdag, 0) 
-    already_dir = np.maximum(cpdag, 0) #save already directed to put back at the end
+    already_dir = np.maximum(cpdag, 0) #save already directed edges to put back at the end
     #still -1 for undirected edge
 
-    #keep going til a run where we finish with bad_dag = False
+    #keep going until a run where we finish with bad_dag = False
     bad_dag = True
     while (bad_dag):
         bad_dag = False
@@ -187,41 +185,39 @@ def fast_sample_dag(cpdag, H):
                                     G[b][a] = 1
                         triple_sat = not (has_cycle_triple(G, i, j, k) or has_new_collider_triple(G, already_dir, i, j, k) or has_undirected_triple(G, i, j, k))
 
-        #now go through everything to check whether base_dag is true
+        #now go through everything to check whether we have a valid dag
         bad_dag = invalid_dag(G, already_dir, rand_order)
 
     return G + already_dir
 
-def uniform_sample_dag_plural(cpdag, H, num_samples, exact=False):
+def uniform_sample_dag_plural(cpdag, num_samples, exact=False):
     """
     Samples multiple DAGs iid uniformly from the MEC
     """
     dags = []
     if exact == False:
         for _ in range(num_samples):
-            dags.append(fast_sample_dag(cpdag, H))
+            dags.append(fast_sample_dag(cpdag))
         return dags
     if exact:
-        all_dags = enumerate_dags(cpdag, H)
+        all_dags = enumerate_dags(cpdag)
         return all_dags[np.random.randint(len(all_dags),size=num_samples)]
 
 
-def enumerate_dags(cpdag, H):
+def enumerate_dags(cpdag):
     """
     a makeshift way of enumerating all days in an MEC by using the sampler
     input:
-    matrix cpdag,
-    list of edges as background knowledge H
-    bool exact, whether to do fast sampling or exact uniform sampling
+    matrix cpdag
     output:
     list of dags
     """
     dags = []
-    total_dags =size_he(cpdag.copy(), H)
+    total_dags =size_he(cpdag.copy())
 
     while len(dags) < total_dags:
     
-        new_dag = fast_sample_dag(cpdag, H)
+        new_dag = fast_sample_dag(cpdag)
         in_list = False
         for dag in dags:
             if np.array_equal(dag, new_dag):
@@ -239,13 +235,13 @@ if __name__ == '__main__':
         cpdag1 = main.cpdag_from_dag_observational(dag1)
         print("new round")
         time0=time.time()
-        enumerate_dags(cpdag1, [])
+        enumerate_dags(cpdag1)
         print(time.time()-time0)
         time0 = time.time()
-        enumerate_dags(cpdag1, [])
+        enumerate_dags(cpdag1)
         print(time.time()-time0)
         time0 = time.time()
-        enumerate_dags(cpdag1, [])
+        enumerate_dags(cpdag1)
         print(time.time()-time0)
 
     

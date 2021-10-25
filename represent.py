@@ -37,8 +37,6 @@ def load_exp_data(name, title, runs, k_range, to_plot, finite=False, var_names=[
     if dream:
         indices = ((np.arange(runs))*5 + dream_i + 1).tolist()
 
-    if finite:
-        True
     for run in indices:
         name1 = name + '_' + str(run)
         with open(name1 + '_OVs.json', 'r') as fp:
@@ -103,9 +101,8 @@ def load_exp_data(name, title, runs, k_range, to_plot, finite=False, var_names=[
     plt.figure(2)
     if x_axis=='b':
         
-        #if finite, names are longer so reformat x labels
-        if finite:
-            plt.xticks(rotation=60)
+        #names are longer so reformat x labels
+        plt.xticks(rotation=60)
         time_plot = []
         for var in to_plot:
             time_plot.append(tmean[var[0]][var[1], -1])
@@ -118,28 +115,30 @@ def load_exp_data(name, title, runs, k_range, to_plot, finite=False, var_names=[
     num_p = len(legend_names)
     for i in range(num_p):
         custom_lines.append(Line2D([0], [0], color=params.colors[i], lw=2, marker=markers[i]))
-    #don;t add different k to the legend now
+    #don't add different k to the legend now
     #custom_lines = custom_lines + [Line2D([0], [0], color='black', lw=2), Line2D([0], [0], color='black', lw=2, linestyle="--"), Line2D([0], [0], color='black', lw=2, linestyle=":")]
 
     if mid_legend:
-        plt.legend(custom_lines, legend_names, loc='right')
+        plt.legend(custom_lines, legend_names, loc='right', prop={"size":16})
     else:
-        plt.legend(custom_lines, legend_names, loc='lower right')
+        plt.legend(custom_lines, legend_names, loc='lower right', prop={"size":16})
     if x_axis == "b":
-        plt.xlabel('Batch Size (m)')
+        plt.xlabel('Batch Size (m)', fontsize= 20)
     else:
-        plt.xlabel('Intervention Size (q)')
+        plt.xlabel('Intervention Size (q)', fontsize= 20)
     if dream:
-        plt.ylabel('Proportion of Oriented Edges in True DAG')
+        plt.ylabel('Proportion of Edges Oriented', fontsize= 20)
     elif finite:
-        plt.ylabel(r'MI Objective $F_{MI}$')
+        plt.ylabel(r'MI Objective $F_{MI}$', fontsize= 20)
     else:
-        plt.ylabel(r'Edge Orientation Objective $F_{EO}$')
+        plt.ylabel(r'Edge Orientation Objective $F_{EO}$', fontsize= 20)
     #plt.title(title)
     if x_axis=="k":
         name_file = name + "_kaxis"
     else:
         name_file = name
+
+    plt.tick_params(labelsize=14)
 
     plt.savefig(name_file + '.pdf', bbox_inches='tight')
     
@@ -148,6 +147,7 @@ def load_exp_data(name, title, runs, k_range, to_plot, finite=False, var_names=[
         #plt.legend(custom_lines, legend_names + ['k=' + str(k) for k in k_range], loc='lower right')
         #plt.title("Average Time per run")
         plt.ylabel('Average Runtime (Seconds)')
+        plt.tick_params(labelsize=16)
         plt.bar(legend_names, time_plot, color="green")
         plt.savefig(name + '_time.pdf', bbox_inches='tight')
     
@@ -313,7 +313,8 @@ def finite_process(name, title, n, runs, k_range, var_names=['rand', 'gred', 'ss
 
 def read_finite(name, n, runs, k_range, var_names):
     """
-    ran before plotting F1 and SHD scores
+    ran before plotting F1 and SHD scores if saved from 
+    finite_process
     read in results from existing jsons, convert to numpy
     """
     with open(name + '_f1s.json', 'r') as fp:
@@ -408,18 +409,20 @@ def finite_plot(name, k_range, f1s, shds, f1s_ebar, shds_ebar, to_plot, legend_n
         for i in range(num_p):
             custom_lines.append(Line2D([0], [0], color=params.colors[i], lw=2, marker=markers[i]))
         if plot_i%2 == 1:
-            plt.legend(custom_lines, legend_names, loc='lower right')
+            plt.legend(custom_lines, legend_names, loc='lower right', prop={"size":16})
         else:
-            plt.legend(custom_lines, legend_names, loc='upper right')
+            plt.legend(custom_lines, legend_names, loc='upper right', prop={"size":16})
         if x_axis == "b":
-            plt.xlabel('Batch Size (m)')
+            plt.xlabel('Batch Size (m)', fontsize= 20)
         else:
-            plt.xlabel('Intervention Size (q)')
+            plt.xlabel('Intervention Size (q)', fontsize= 20)
 
         if plot_i%2 == 1:
-            plt.ylabel('F1 Score')
+            plt.ylabel('F1 Score', fontsize= 20)
         else:
-            plt.ylabel('Structural Hamming Distance')
+            plt.ylabel('Structural Hamming Distance', fontsize= 20)
+
+        plt.tick_params(labelsize=14)
         #plt.title(title)
         if x_axis=="k":
             name_file = name + "_kaxis"
@@ -548,7 +551,8 @@ for n in [40]:
     title = "Mean F1 on ER 0.1 Graph n=" + str(n)
 
     #comment out read_finite if not yet computed F1 or SHD scores, comment out finite_process if already
-    #have these computed
+    #have these computed. finite_process computes these and saves them, read_finite just reads them if they 
+    # have already been computed
     #f1s, shds, f1s_ebar, shds_ebar = finite_process(name, title, n, runs, k_range, var_names=meths, legend_names=labs)
 
     f1s, shds, f1s_ebar, shds_ebar = read_finite(name, n, runs, k_range, meths)
@@ -561,4 +565,48 @@ for n in [40]:
 
 
 
+#all finite plots again without ssga
+
+runs = 200
+for n in [40]:
+    meths = ['rand', 'ss_inf_b', 'cont', 'ss_a', 'ss_b']
+    if n == 40:
+        k_range = [1,2,3,4,5]
+    else:
+        k_range = [1,2,3]
+
+    to_plot = [('ss_inf_b', 4), ('ss_b', 4), ('cont', 4), ('rand', 4), ('ss_a', 0)]
+    labs = [r'SSGb-$\infty$ (q=5)', "SSGb (q=5)", r'DGC-$\infty$ (q=5)', 'Rand (q=5)', 'Greedy (q=1)']
+    name ='figures_finite_feb24_no_ssga/ER_0.1_n=' + str(n)
+    title = "Mean Objective Value on ER 0.1 Graph n=" + str(n)
+    load_exp_data(name, title, runs, k_range, to_plot, finite=True, var_names=meths, legend_names=labs, b_range=[1,2,3,4,5,6,7,8])
+
+    to_plot = [('ss_inf_b', 1), ('ss_b', 1), ('cont', 1), ('rand', 1)]
+    labs = [r'SSGb-$\infty$ (m=2)', "SSGb (m=2)", r'DGC-$\infty$ (m=2)', 'Rand (m=2)']
+    name ='figures_finite_feb24_no_ssga/ER_0.1_n=' + str(n)
+    title = "Mean Objective Value on ER 0.1 Graph n=" + str(n)
+    load_exp_data(name, title, runs, k_range, to_plot, finite=True, var_names=meths, legend_names=labs, x_axis="k", b_range=[1,2,3,4,5,6,7,8], mid_legend=True)
+
+
+runs = 200
+k_range = [1,2,3,4,5]
+for n in [40]:
+    meths = ['rand', 'ss_inf_b', 'cont', 'ss_b', 'ss_a']#, 'ss_inf_b_cont']
+
+    to_plot = [('ss_inf_b', 4), ('ss_b', 4), ('cont', 4), ('rand', 4), ('ss_a', 0)]
+    labs = [r'SSGb-$\infty$ (q=5)', "SSGb (q=5)", r'DGC-$\infty$ (q=5)', 'Rand (q=5)', 'Greedy (q=1)']
+    name ='figures_finite_feb24_no_ssga/ER_0.1_n=' + str(n)
+    title = "Mean F1 on ER 0.1 Graph n=" + str(n)
+
+    #comment out read_finite if not yet computed F1 or SHD scores, comment out finite_process if already
+    #have these computed
+    #f1s, shds, f1s_ebar, shds_ebar = finite_process(name, title, n, runs, k_range, var_names=meths, legend_names=labs)
+
+    f1s, shds, f1s_ebar, shds_ebar = read_finite(name, n, runs, k_range, meths)
+
+    finite_plot(name, k_range, f1s, shds, f1s_ebar, shds_ebar, to_plot, labs, x_axis="b")
+
+    to_plot = [('ss_inf_b', 1), ('ss_b', 1), ('cont', 1), ('rand', 1)]
+    labs = [r'SSGb-$\infty$ (m=2)', "SSGb (m=2)", r'DGC-$\infty$ (m=2)', 'Rand (m=2)']
+    finite_plot(name, k_range, f1s, shds, f1s_ebar, shds_ebar, to_plot, labs, x_axis="k")
 

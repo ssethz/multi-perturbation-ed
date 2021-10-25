@@ -16,7 +16,7 @@ Description of important files:
 main.py: contains all necessary functions for infinite sample experiments (including DREAM) and the 
     core algorithms of the project. Run to carry-out infinite sample experiments. 
     
-finite_cd.py: contains machinary specific to finite sample experiments. Run to carry-out finite sample experiments.
+finite_cd.py: contains machinary specific to finite sample experiments for causal discovery (cd). Run to carry-out finite sample experiments.
 
 finite.py: contains some helper functions for finite experiments, such as generating DAGs with linear SEMs and computing the BIC of a model.
 
@@ -26,7 +26,7 @@ represent.py: a script with some functions for plotting the results of experimen
 
 proposition.py: code used in the computations for the proof of Proposition 1. 
 
-gnw_obs: a file containing all of the GeneNetWeaver ground-truth DAGs used in our experiments. 
+gnw_obs: a folder containing all of the GeneNetWeaver ground-truth DAGs used in our experiments. 
 
 Notation:
 For the paper, number of variables per intervention was denoted q and batch size denoted m. In the code, we denote number of variables per intervention as k and the batch size as b or n_b. Some naming conventions were changed between the code and the paper. Format is in paper -> in code. 

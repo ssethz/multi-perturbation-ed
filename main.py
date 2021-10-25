@@ -47,7 +47,7 @@ def generate_chain_dag_fixed_root(n, v):
 
 def generate_barabasi_albert(n, m1, m2=1, p=1):
     #Generates a scale-free dag using the Barabasi-Albert Model
-    #each node is attached to m1 times with prob p, else p2 times
+    #each node is attached m1 times with prob p, else m2 times
     #0 will always be the root
     g = nx.dual_barabasi_albert_graph(n, m1, m2, p)
     dag = np.triu(nx.to_numpy_matrix(g), k=1)
@@ -406,7 +406,7 @@ def meek(cpdag, new_edges=None, skip_r3=False, is_tree=False):
 
     return cpdag
 
-def orient_from_intervention(dag, cpdag, intervention_set, hard=True, is_tree=False):
+def orient_from_intervention(dag, cpdag, intervention_set, is_tree=False):
     """
     uses the meek rules to update a cpdag given infinite sample interventional data 
     from a single intervention. currently no implementation of soft interventions. 
@@ -414,12 +414,9 @@ def orient_from_intervention(dag, cpdag, intervention_set, hard=True, is_tree=Fa
     matrix dag: the true dag
     matrix cpdag: the current cpdag
     list of lists of ints intervention_set: the nodes intervened on
-    bool hard: whether we are doing hard interventions
     output:
     matrix: the cpdag after the intervention
     """
-
-    #TODO: soft intervention capability
 
     n = dag.shape[0]
     new_edges = []
@@ -528,7 +525,7 @@ def objective_given_intervention(cpdag, intervention_set, ref_cpdag, n_samples =
     obj = 0
 
     if mode == "sample":
-        for dag in mec_size.uniform_sample_dag_plural(cpdag, [], n_samples):
+        for dag in mec_size.uniform_sample_dag_plural(cpdag, n_samples):
             cpdag2 = orient_from_intervention(dag, cpdag.copy(), intervention_set, is_tree=is_tree)
             obj += (cpdag_obj_val(cpdag2) - cpdag_obj_val(ref_cpdag))/n_samples
         return obj
@@ -569,7 +566,7 @@ def gen_stochastic_grad_fun(cpdag, ref_cpdag, num_sample=1, exact=True, total_x 
         grad_f = np.zeros(n)
         #sample the intervention given x
         
-        dags = mec_size.uniform_sample_dag_plural(cpdag, [], num_sample, exact=exact)
+        dags = mec_size.uniform_sample_dag_plural(cpdag, num_sample, exact=exact)
         for dag in dags:
             computed_val = {}
             #do runs for multiple different samples of x
@@ -625,7 +622,7 @@ def gen_ss_stochastic_grad_fun(cpdag, ref_cpdag, num_sample=1, exact=True, total
         grad_f = np.zeros(n_ss)
         #sample the intervention given x
         
-        dags = mec_size.uniform_sample_dag_plural(cpdag, [], num_sample, exact=exact)
+        dags = mec_size.uniform_sample_dag_plural(cpdag, num_sample, exact=exact)
         for dag in dags:
             computed_val = {}
             #do runs for multiple different samples of x
@@ -666,10 +663,8 @@ def pipage(x, k):
     """
     perform pipage rounding for a nonmonotone submodular function
     "Maximizing a Monotone Submodular Function subject to a Matroid Constraint"
-    in our case we don't necessarily start of with a tight solution but this is fine
     pipage round is performed on the set until 1 non integer value remains
-    we then round this based on the better solution
-    to start with we will also just randomly round the last value
+    we will just randomly round the last value by sampling a bernoulli
     input:
     float array x: the solution to be rounded
     int k: constraint on perturbation size
@@ -759,7 +754,7 @@ def gen_hess_fun(cpdag, ref_cpdag, num_sample=1, exact=True, total_x = 1, is_tre
         """
         #sample the intervention given x
         
-        dags = mec_size.uniform_sample_dag_plural(cpdag, [], num_sample, exact=exact)
+        dags = mec_size.uniform_sample_dag_plural(cpdag, num_sample, exact=exact)
         hess = np.zeros((n, n))
         for dag in dags:
             computed_val = {}
@@ -801,7 +796,7 @@ def gen_ss_hess_fun(cpdag, ref_cpdag, num_sample=1, exact=True, total_x = 1, is_
         
         #sample the intervention given x
         
-        dags = mec_size.uniform_sample_dag_plural(cpdag, [], num_sample, exact=exact)
+        dags = mec_size.uniform_sample_dag_plural(cpdag, num_sample, exact=exact)
         hess = np.zeros((n_ss, n_ss))
         for dag in dags:
             computed_val = {}
@@ -964,7 +959,7 @@ def edge_obj_sample(cpdags, ws, num_samples, obj=None, is_tree=False):
         cpdag_list = []
         for i in range(num_samples):
             cpdag = cpdags[np.random.choice(num_cpdags, p=ws)]
-            dag = mec_size.uniform_sample_dag_plural(cpdag, [], 1)[0]
+            dag = mec_size.uniform_sample_dag_plural(cpdag, 1)[0]
             cpdag_list.append(cpdag)
             dag_list.append(dag)
         def new_obj(epsilon):
@@ -1555,13 +1550,13 @@ def run_experiment(n, generator, meths, labs, k_range, title = '', name='', repe
                 raise Exception
             cpdag = cpdag_from_dag_observational(dag)
             max_score = cpdag_obj_val(dag) - cpdag_obj_val(cpdag) # for normalizing scores
-            #accept dags with mec size less than 100 and more than 5
             if generator.startswith("dream"):
-                #no need to compute whole mec if in dream mode
+                #no need to compute MEC size if in dream mode
                 valid_dag=True
                 break
-            mec_size_total = mec_size.mec_size(cpdag, [])
+            mec_size_total = mec_size.mec_size(cpdag)
             if generator not in ['fully_connected', 'chain', 'tree', 'kstar']:
+                #reject DAGs that have MEC too small or too large (computational reasons)
                 if n <= 20:
                     lower_const = 10
                 else:
@@ -1574,7 +1569,7 @@ def run_experiment(n, generator, meths, labs, k_range, title = '', name='', repe
                 valid_dag = True
 
         if not generator.startswith("dream"):
-            full_mec = mec_size.enumerate_dags(cpdag, [])
+            full_mec = mec_size.enumerate_dags(cpdag)
         
         #print(objective_given_intervention(cpdag, [[0]], cpdag.copy()))
 
