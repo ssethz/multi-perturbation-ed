@@ -13,12 +13,11 @@ To have all the necessary packages for running these experiments please use cond
 
 Description of important files:
 
-main.py: contains all necessary functions for infinite sample experiments (including DREAM) and the 
-    core algorithms of the project. Run to carry-out infinite sample experiments. 
+main.py: contains all necessary functions for infinite sample experiments (including DREAM) and the core algorithms of the project. Run to carry-out infinite sample experiments. Needs folders called "figures" and "figures_dream" to exist to output results to. 
     
-finite_cd.py: contains machinary specific to finite sample experiments for causal discovery (cd). Run to carry-out finite sample experiments.
+finite_cd.py: contains machinary specific to finite sample experiments for causal discovery (cd). Run to carry-out finite sample experiments. Needs a folder called "figures" to exist to output results to. 
 
-finite.py: contains some helper functions for finite experiments, such as generating DAGs with linear SEMs and computing the BIC of a model.
+finite.py: contains some helper functions for finite experiments, such as generating DAGs with linear SEMs and computing the BIC of a model. 
 
 mec_size.py: contains functions for sampling from an MEC or enumerating an MEC
 

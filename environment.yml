@@ -83,5 +83,4 @@ dependencies:
     - traitlets==5.0.5
     - typing==3.7.4.3
     - wcwidth==0.2.5
-prefix: /Users/scott/opt/anaconda3/envs/batch_causal
 
